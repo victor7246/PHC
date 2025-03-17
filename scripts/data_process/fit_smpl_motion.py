@@ -67,11 +67,10 @@ def process_motion(key_names, key_name_to_pkls, cfg):
     smpl_parser_n = SMPL_Parser(model_path="data/smpl", gender="neutral")
     shape_new, scale = joblib.load(f"data/{cfg.robot.humanoid_type}/shape_optimized_v1.pkl") # TODO: run fit_smple_shape to get this
     
-    
     all_data = {}
     pbar = tqdm(key_names, position=0, leave=True)
     for data_key in pbar:
-        amass_data = load_amass_data(key_name_to_pkls[data_key])
+        amass_data = load_amass_data(key_name_to_pkls[data_key]) #load_amass_data(filename) #"/home/ubuntu/Documents/PHC/gesture.pkl" #load_amass_data(key_name_to_pkls[data_key])
         if amass_data is None: continue
         skip = int(amass_data['fps']//30)
         trans = torch.from_numpy(amass_data['trans'][::skip])
@@ -191,21 +190,19 @@ def process_motion(key_names, key_name_to_pkls, cfg):
 
 @hydra.main(version_base=None, config_path="../../phc/data/cfg", config_name="config")
 def main(cfg : DictConfig) -> None:
-    if "amass_root" in cfg:
-        amass_root = cfg.amass_root
+    if "smpl_dir" in cfg:
+        smpl_dir = cfg.smpl_dir
     else:
-        raise ValueError("amass_root is not specified in the config")
+        raise ValueError("smpl_dir is not specified in the config")
     
-    all_pkls = glob.glob(f"{amass_root}/**/*.npz", recursive=True)
-    split_len = len(amass_root.split("/"))
-    key_name_to_pkls = {"0-" + "_".join(data_path.split("/")[split_len:]).replace(".npz", ""): data_path for data_path in all_pkls}
-    key_names = ["0-" + "_".join(data_path.split("/")[split_len:]).replace(".npz", "") for data_path in all_pkls]
-    if not cfg.get("fit_all", False):
-        key_names = ["0-Transitions_mocap_mazen_c3d_dance_stand_poses"]
-    
+    all_pkls = glob.glob(f"{smpl_dir}/*.pkl", recursive=True)
+
+    key_name_to_pkls = {data_path.split("/")[-1].replace(".pkl", ""): data_path for data_path in all_pkls}
+    key_names = [data_path.split("/")[-1].replace(".pkl", "") for data_path in all_pkls][:30]
+
     from multiprocessing import Pool
     jobs = key_names
-    num_jobs = 30
+    num_jobs = 1
     chunk = np.ceil(len(jobs)/num_jobs).astype(int)
     jobs= [jobs[i:i + chunk] for i in range(0, len(jobs), chunk)]
     job_args = [(jobs[i], key_name_to_pkls, cfg) for i in range(len(jobs))]
@@ -222,17 +219,19 @@ def main(cfg : DictConfig) -> None:
         for data_dict in all_data_list:
             all_data.update(data_dict)
     # import ipdb; ipdb.set_trace()
-    if len(all_data) == 1:
-        data_key = list(all_data.keys())[0]
+
+    for data_key in all_data:
         os.makedirs(f"data/{cfg.robot.humanoid_type}/v1/singles", exist_ok=True)
         dumped_file = f"data/{cfg.robot.humanoid_type}/v1/singles/{data_key}.pkl"
         print(dumped_file)
-        joblib.dump(all_data, dumped_file)
-    else:
-        os.makedirs(f"data/{cfg.robot.humanoid_type}/v1/", exist_ok=True)
-        joblib.dump(all_data, f"data/{cfg.robot.humanoid_type}/v1/amass_all.pkl")
-    
+        all_data2 = {}
+        all_data2[data_key] = all_data[data_key]
+        joblib.dump(all_data2, dumped_file)
 
+    if len(all_data) > 1:
+        os.makedirs(f"data/{cfg.robot.humanoid_type}/v1/", exist_ok=True)
+        joblib.dump(all_data, f"data/{cfg.robot.humanoid_type}/v1/smpl_all.pkl")
+    
 
 if __name__ == "__main__":
     main()

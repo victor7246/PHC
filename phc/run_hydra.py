@@ -32,7 +32,8 @@ import sys
 import pdb
 import os.path as osp
 os.environ["OMP_NUM_THREADS"] = "1"
-
+os.environ["WANDB_MODE"] = "offline"
+os.environ['WANDB_DISABLED'] = 'true'
 sys.path.append(os.getcwd())
 
 from phc.utils.config import set_np_formatting, set_seed
@@ -295,6 +296,7 @@ def main(cfg_hydra: DictConfig) -> None:
         flags.real_traj = True
     
     cfg.train = not cfg.test
+    print (cfg)
     project_name = cfg.get("project_name", "egoquest")
     if (not cfg.no_log) and (not cfg.test) and (not cfg.debug):
         wandb.init(
@@ -309,6 +311,8 @@ def main(cfg_hydra: DictConfig) -> None:
     
     set_seed(cfg.get("seed", -1), cfg.get("torch_deterministic", False))
 
+    print (cfg)
+    
     # Create default directories for weights and statistics
     cfg_train = cfg.learning
     cfg_train['params']['config']['network_path'] = cfg.output_path
