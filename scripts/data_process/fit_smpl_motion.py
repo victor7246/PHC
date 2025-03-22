@@ -199,10 +199,14 @@ def main(cfg : DictConfig) -> None:
 
     #key_name_to_pkls = {data_path.split("/")[-1].replace(".pkl", ""): data_path for data_path in all_pkls}
     #key_names = [data_path.split("/")[-1].replace(".pkl", "") for data_path in all_pkls][:30]
-    all_pkls = glob.glob(f"{smpl_dir}/**/*.npz", recursive=True)
-    split_len = len(smpl_dir.split("/"))
-    key_name_to_pkls = {"0-" + "_".join(data_path.split("/")[split_len:]).replace(".npz", ""): data_path for data_path in all_pkls}
-    key_names = ["0-" + "_".join(data_path.split("/")[split_len:]).replace(".npz", "") for data_path in all_pkls][:3]
+    all_pkls = glob.glob(f"{smpl_dir}/**/*.npz", recursive=True) + glob.glob(f"{smpl_dir}/**/*.pkl", recursive=True)
+    if smpl_dir.endswith("/"):
+        split_len = len(smpl_dir.split("/")) - 1
+    else:
+        split_len = len(smpl_dir.split("/"))
+        
+    key_name_to_pkls = {"0-" + "_".join(data_path.split("/")[split_len:]).replace(".npz", "").replace(".pkl",""): data_path for data_path in all_pkls}
+    key_names = ["0-" + "_".join(data_path.split("/")[split_len:]).replace(".npz", "").replace(".pkl","") for data_path in all_pkls]
 
     print (key_names)
     
